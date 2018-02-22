@@ -1,1 +1,1 @@
-import .community
+import community
