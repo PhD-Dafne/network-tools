@@ -20,7 +20,7 @@ def partition_statistics(partition, graph, weight=None):
     for c in reverse_partition:
         subgraph = graph.subgraph(reverse_partition[c])
         statistics[c]['size'] = nx.number_of_nodes(subgraph)
-        statistics[c]['total_degree'] = sum(graph.degree(reverse_partition[c]).values())
+        statistics[c]['total_degree'] = sum(dict(graph.degree(reverse_partition[c])).values())
         statistics[c]['average_degree'] = statistics[c]['total_degree'] / statistics[c]['size']
         statistics[c]['internal_degree'] = nx.number_of_edges(subgraph)
         statistics[c]['average_internal_degree'] = statistics[c]['internal_degree'] / statistics[c]['size']
@@ -28,7 +28,7 @@ def partition_statistics(partition, graph, weight=None):
         statistics[c]['average_external_degree'] = statistics[c]['external_degree'] / statistics[c]['size']
         statistics[c]['conductance'] = statistics[c]['external_degree'] / statistics[c]['total_degree']
         if weight is not None:
-            statistics[c]['total_strength'] = sum(graph.degree(reverse_partition[c], weight).values())
+            statistics[c]['total_strength'] = sum(dict(graph.degree(reverse_partition[c], weight)).values())
             statistics[c]['average_strength'] = statistics[c]['total_strength'] / statistics[c]['size']
             statistics[c]['internal_strength'] = sum(nx.get_edge_attributes(subgraph, weight).values())
             statistics[c]['average_internal_strength'] = statistics[c]['internal_strength'] / statistics[c]['size']
@@ -61,7 +61,7 @@ def compare_communities(partition1, partition2, graph):
     result['rand_index'] = (a11+a00)/(a11+a01+a10+a00)
     result['jaccard_index'] = a11/(a11+a01+a10)
     
-    # Information theoretical measures
+    # Information theoretical measures, see https://bitbucket.org/dsign/gecmi/wiki/Home
     n = len(partition_merged)
     p_xy = partition_merged.groupby(['p1', 'p2']).apply(len)/n
     return result
