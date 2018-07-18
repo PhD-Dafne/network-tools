@@ -114,13 +114,14 @@ def consensus_partition(g,
             print('Smallest connected component: {}'.format(min(ccs.sizes())))
 
         # plot adjacency matrix
+        if verbose:
+            plot_sorted_adjacency(consensus_matrix, partition.membership)
         
-        if 'weight' in graph.es.attributes() and g2.es['weight'] == graph.es['weight']:
+        # Check if converged
+        if(min(consensus_matrix[consensus_matrix.nonzero()])==1):
             if verbose:
                 print('Converged!')
             return consensus_matrix, ccs.membership
-        if verbose:
-            plot_sorted_adjacency(consensus_matrix, partition.membership)
         graph = g2
         weights = 'weight'
         
