@@ -1,6 +1,10 @@
 import networkx as nx
 import collections
 import pandas as pd
+from collections import Counter
+import igraph
+import louvain
+import numpy as np
 
 def partition_statistics(partition, graph, weight=None):
     '''
@@ -65,3 +69,77 @@ def compare_communities(partition1, partition2, graph):
     n = len(partition_merged)
     p_xy = partition_merged.groupby(['p1', 'p2']).apply(len)/n
     return result
+
+
+
+
+def consensus_partition(g, 
+                        partition_type = louvain.ModularityVertexPartition,
+                        weights=None,
+                        nr_partitions = 100,
+                        threshold = 0,
+                        max_nr_iterations = 5,
+                       verbose=False):
+    '''
+    Partitions graph based on consensus clustering
+    :param g: igraph Graph
+    '''
+    n = len(g.vs)
+    graph = g
+    for j in range(max_nr_iterations):
+        if verbose:
+            print('Iteration {}'.format(j))
+
+        consensus_matrix = np.zeros((n, n))
+        for i in range(nr_partitions):
+            partition = louvain.find_partition(graph, partition_type=partition_type, weights=weights)
+            k = len(partition.sizes()) # Number of partitions
+            b = np.zeros((n, k))
+            b[np.arange(n), partition.membership] = 1
+            consensus_matrix += b.dot(b.T)
+        consensus_matrix /= nr_partitions
+
+        g2 = graph.copy()
+        g2.delete_edges(g2.es)
+
+        consensus_matrix_fixed = consensus_matrix.copy()
+        consensus_matrix_fixed[consensus_matrix<=threshold] = 0
+        ix, jx = consensus_matrix_fixed.nonzero()
+        for i,j in zip(list(ix), list(jx)):
+            if i!=j: # is this necessary?
+                g2.add_edge(i,j,weight=consensus_matrix_fixed[i,j])
+        # are there any solo clusters?
+        ccs = g2.clusters()
+        if verbose:
+            print('Smallest connected component: {}'.format(min(ccs.sizes())))
+
+        # plot adjacency matrix
+        
+        if 'weight' in graph.es.attributes() and g2.es['weight'] == graph.es['weight']:
+            if verbose:
+                print('Converged!')
+            return consensus_matrix, ccs.membership
+        if verbose:
+            plot_sorted_adjacency(consensus_matrix, partition.membership)
+        graph = g2
+        weights = 'weight'
+        
+    return consensus_matrix, ccs.membership
+
+def plot_sorted_adjacency(adj, membership):
+    import matplotlib.pyplot as plt
+    order = np.argsort(membership)
+    adj_sorted = adj[order][:,order]
+    ax = plt.imshow(adj_sorted, cmap='Greys', interpolation='none')
+
+    n = adj.shape[0]
+    cumsums = np.concatenate(([0], np.cumsum(list(Counter(membership).values()))))
+    for x, y in zip(cumsums[:-1],cumsums[1:]):
+        plt.hlines(x-.5, x-.5, y-.5, color='red', antialiased=False)
+        plt.vlines(x-.5, x-.5, y-.5, color='red', antialiased=False)
+        plt.hlines(y-.5, x-.5, y-.5, color='red', antialiased=False)
+        plt.vlines(y-.5, x-.5, y-.5, color='red', antialiased=False)
+
+    plt.xlim(0, n-.5)
+    plt.ylim(n-.5, 0)
+    plt.show()
