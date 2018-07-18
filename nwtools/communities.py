@@ -133,7 +133,9 @@ def plot_sorted_adjacency(adj, membership):
     ax = plt.imshow(adj_sorted, cmap='Greys', interpolation='none')
 
     n = adj.shape[0]
-    cumsums = np.concatenate(([0], np.cumsum(list(Counter(membership).values()))))
+    cluster_sizes = Counter(membership)
+    cluster_sizes = [cluster_sizes[c] for c in set(sorted(membership))]
+    cumsums = np.concatenate(([0], np.cumsum(cluster_sizes)))
     for x, y in zip(cumsums[:-1],cumsums[1:]):
         plt.hlines(x-.5, x-.5, y-.5, color='red', antialiased=False)
         plt.vlines(x-.5, x-.5, y-.5, color='red', antialiased=False)
