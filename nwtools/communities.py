@@ -5,6 +5,8 @@ from collections import Counter
 import igraph
 import louvain
 import numpy as np
+import itertools
+from nwtools import common
 
 def partition_statistics(partition, graph, weight=None):
     '''
@@ -146,3 +148,53 @@ def plot_sorted_adjacency(adj, membership):
     plt.xlim(0, n-.5)
     plt.ylim(n-.5, 0)
     plt.show()
+    
+
+def jaccard_crosstab(part1, part2, keys1, keys2):
+    sim = np.zeros((len(part1), len(part2)))
+    for (i, c1), (j, c2) in itertools.product(enumerate(keys1), enumerate(keys2)):
+        sim[i, j] = common.jaccard(part1[c1], part2[c2])
+    return sim
+
+
+def hungarian_algorithm(ctab, row_labels, col_labels):
+    from scipy.optimize import linear_sum_assignment
+    if ctab.shape[0] > ctab.shape[1]:
+        raise Exception('Rows should be fewer than columns')
+        
+    # Use the Hungarian algorithm
+    row_ind, col_ind = linear_sum_assignment(- ctab)
+    mapXtoY = {row_labels[r]: col_labels[c] for r, c in zip(row_ind, col_ind)}
+    return(mapXtoY)
+
+def map_labels_over_time(labels_list, jaccard=True, min_overlap=0.1, character_labels=True):
+    if character_labels:
+        import string
+        new_labels = list(string.ascii_lowercase + string.ascii_uppercase)
+    else:
+        max_nr_of_labels = np.sum([len(s) for s in labels_list])
+        new_labels = list(range(max_nr_of_labels))
+    max_new_label = 0
+    
+    mappings = []
+
+    part1 = None
+    for t in range(len(labels_list)):
+        part2 = labels_list[t]
+        if part1 is None:
+            m = {l: new_labels[i] for (i,l) in enumerate(part2.keys())}
+            max_new_label = len(part2)
+        else:
+            col_labels = sorted(part1.keys()) 
+            row_labels = sorted(part2.keys()) 
+
+            ctab = jaccard_crosstab(part2, part1, row_labels, col_labels)
+
+            # Add dummy columns
+            ctab2 = np.hstack((ctab, np.ones((len(part2), len(part2)))*min_overlap))
+            col_labels = col_labels + new_labels[max_new_label:max_new_label+len(part2)]
+            m = hungarian_algorithm(ctab2, row_labels, col_labels)
+            max_new_label = new_labels.index(max(m.values()))+1
+        mappings.append(m)
+        part1 = {m[c]: part2[c] for c in part2}
+    return mappings
