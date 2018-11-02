@@ -198,3 +198,20 @@ def map_labels_over_time(labels_list, jaccard=True, min_overlap=0.1, character_l
         mappings.append(m)
         part1 = {m[c]: part2[c] for c in part2}
     return mappings
+
+def citation_distance_matrix(graph):
+    '''
+    :param graph: networkx graph
+    returns: distance matrix, node labels
+    '''
+    sinks = [key for key, outdegree in graph.out_degree() if outdegree==0]
+    paths = {s: nx.shortest_path_length(graph, target=s) for s in sinks}
+    paths_df = pd.DataFrame(paths)#, index=graph.nodes)
+    paths_nonzero_df = 1*~paths_df.isnull()
+    a_paths_nonzero = paths_nonzero_df.values
+    m = a_paths_nonzero
+    intersect = m.dot(m.T)
+    union = m.dot(np.ones(m.shape).T) + np.ones(m.shape).dot(m.T) -intersect
+    union[union==0] = 1
+    dist = 1 - intersect/union
+    return dist, paths_nonzero_df.index
