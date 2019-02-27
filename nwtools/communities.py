@@ -3,7 +3,7 @@ import collections
 import pandas as pd
 from collections import Counter
 import igraph
-import louvain
+import leidenalg
 import numpy as np
 import itertools
 from nwtools import common
@@ -76,7 +76,7 @@ def compare_communities(partition1, partition2, graph):
 
 
 def consensus_partition(g, 
-                        partition_type = louvain.ModularityVertexPartition,
+                        partition_type = leidenalg.ModularityVertexPartition,
                         weights=None,
                         nr_partitions = 100,
                         threshold = 0,
@@ -94,7 +94,7 @@ def consensus_partition(g,
 
         consensus_matrix = np.zeros((n, n))
         for i in range(nr_partitions):
-            partition = louvain.find_partition(graph, partition_type=partition_type, weights=weights)
+            partition = leidenalg.find_partition(graph, partition_type=partition_type, weights=weights)
             k = len(partition.sizes()) # Number of partitions
             b = np.zeros((n, k))
             b[np.arange(n), partition.membership] = 1
