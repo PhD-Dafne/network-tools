@@ -74,61 +74,6 @@ def compare_communities(partition1, partition2, graph):
 
 
 
-
-def consensus_partition(g, 
-                        partition_type = leidenalg.ModularityVertexPartition,
-                        weights=None,
-                        nr_partitions = 100,
-                        threshold = 0,
-                        max_nr_iterations = 5,
-                       verbose=False):
-    '''
-    Partitions graph based on consensus clustering
-    :param g: igraph Graph
-    '''
-    n = len(g.vs)
-    graph = g
-    for j in range(max_nr_iterations):
-        if verbose:
-            print('Iteration {}'.format(j))
-
-        consensus_matrix = np.zeros((n, n))
-        for i in range(nr_partitions):
-            partition = leidenalg.find_partition(graph, partition_type=partition_type, weights=weights)
-            k = len(partition.sizes()) # Number of partitions
-            b = np.zeros((n, k))
-            b[np.arange(n), partition.membership] = 1
-            consensus_matrix += b.dot(b.T)
-        consensus_matrix /= nr_partitions
-
-        g2 = graph.copy()
-        g2.delete_edges(g2.es)
-
-        consensus_matrix_fixed = consensus_matrix.copy()
-        consensus_matrix_fixed[consensus_matrix<=threshold] = 0
-        ix, jx = consensus_matrix_fixed.nonzero()
-        for i,j in zip(list(ix), list(jx)):
-            if i!=j: # is this necessary?
-                g2.add_edge(i,j,weight=consensus_matrix_fixed[i,j])
-        # are there any solo clusters?
-        ccs = g2.clusters()
-        if verbose:
-            print('Smallest connected component: {}'.format(min(ccs.sizes())))
-
-        # plot adjacency matrix
-        if verbose:
-            plot_sorted_adjacency(consensus_matrix, partition.membership)
-        
-        # Check if converged
-        if(min(consensus_matrix[consensus_matrix.nonzero()])==1):
-            if verbose:
-                print('Converged!')
-            return consensus_matrix, ccs.membership
-        graph = g2
-        weights = 'weight'
-        
-    return consensus_matrix, ccs.membership
-
 def plot_sorted_adjacency(adj, membership):
     import matplotlib.pyplot as plt
     order = np.argsort(membership)
