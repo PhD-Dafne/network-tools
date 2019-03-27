@@ -1,8 +1,7 @@
 import igraph
 import leidenalg
 import numpy as np
-import itertools
-from nwtools import common, communities
+import scipy.sparse
 
 
 def get_initial_partitions(g, 
@@ -15,14 +14,13 @@ def get_initial_partitions(g,
     return partitions
 
 def get_consensus_matrix(partitions, nr_nodes):
-    consensus_matrix = np.zeros((nr_nodes, nr_nodes))
+    consensus_matrix = scipy.sparse.coo_matrix((nr_nodes, nr_nodes))
     for partition in partitions:
-        k = len(partition.sizes()) # Number of clusters
-        b = np.zeros((nr_nodes, k))
-        b[np.arange(nr_nodes), partition.membership] = 1
+        b = scipy.sparse.coo_matrix((np.repeat(1, len(partition.membership)), (
+            np.arange(nr_nodes), partition.membership)))
         consensus_matrix += b.dot(b.T)
     consensus_matrix /= len(partitions)
-    return consensus_matrix
+    return consensus_matrix.toarray()
 
 def consensus_partition(g, initial_partition=None,
                         partition_type = leidenalg.ModularityVertexPartition,
