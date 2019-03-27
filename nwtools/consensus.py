@@ -37,10 +37,6 @@ def consensus_partition(g, initial_partition=None,
     '''
     n = len(g.vs)
     graph = g
-    adj = np.array(list(graph.get_adjacency(attribute=weights)))
-    memberships = []
-        
-    
         
     for j in range(max_nr_iterations):
         if verbose:
@@ -62,7 +58,7 @@ def consensus_partition(g, initial_partition=None,
         g2 = graph.copy()
         g2.delete_edges(g2.es)
 
-        ix, jx = np.where(consensus_matrix>0.5)
+        ix, jx = np.where(consensus_matrix>threshold)
         for i,j in zip(list(ix), list(jx)):
             if i!=j: 
                 g2.add_edge(i,j,weight=consensus_matrix[i,j])
@@ -73,10 +69,6 @@ def consensus_partition(g, initial_partition=None,
         if verbose:
             print('Smallest connected component: {}'.format(min(ccs.sizes())))
 
-        # plot adjacency matrix
-        if verbose:
-            plot_sorted_adjacency(consensus_matrix, partition.membership)
-            
         # Check if converged
         if(min(consensus_matrix[consensus_matrix.nonzero()])==1):
             if verbose:
@@ -89,6 +81,7 @@ def consensus_partition(g, initial_partition=None,
 
 
 def get_nmi_scores(consensus_membership, all_memberships, average_method='geometric'):
+    from sklearn.metrics.cluster import normalized_mutual_info_score
     nmi_consensus = [normalized_mutual_info_score(consensus_membership, mem, average_method=average_method) 
                      for mem in all_memberships]
     nmi_all = [[normalized_mutual_info_score(mem1, mem2, average_method=average_method) 
