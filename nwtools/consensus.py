@@ -53,15 +53,13 @@ def consensus_partition(g, initial_partition=None,
         
         # Calculate the consensus matrix
         consensus_matrix = get_consensus_matrix(partitions, n)
-            
-        # Create new graph based on consensus matrix
-        g2 = graph.copy()
-        g2.delete_edges(g2.es)
 
-        ix, jx = np.where(consensus_matrix>threshold)
-        for i,j in zip(list(ix), list(jx)):
-            if i!=j: 
-                g2.add_edge(i,j,weight=consensus_matrix[i,j])
+        # Create new graph based on consensus matrix
+        consensus_matrix_copy = np.triu(consensus_matrix, 1)
+        consensus_matrix_copy[consensus_matrix_copy <= threshold] = 0
+        g2 = igraph.Graph.Weighted_Adjacency(consensus_matrix_copy.tolist(),
+                                         loops=False, attr='weight',
+                                         mode='MAX')
         
         ccs = g2.clusters()
         
