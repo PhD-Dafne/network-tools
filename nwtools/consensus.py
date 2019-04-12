@@ -39,7 +39,7 @@ def consensus_partition(g, initial_partition=None,
     '''
     n = len(g.vs)
     graph = g
-
+    first_consensus_matrix = None
     for j in range(max_nr_iterations):
         if verbose:
             print('Iteration {}'.format(j))
@@ -55,7 +55,8 @@ def consensus_partition(g, initial_partition=None,
 
         # Calculate the consensus matrix
         consensus_matrix = get_consensus_matrix(partitions, n)
-
+        if j==0:
+            first_consensus_matrix = consensus_matrix
         # Create new graph based on consensus matrix
         consensus_matrix_copy = np.triu(consensus_matrix, 1)
         consensus_matrix_copy[consensus_matrix_copy <= threshold] = 0
@@ -73,10 +74,10 @@ def consensus_partition(g, initial_partition=None,
         if (min(consensus_matrix[consensus_matrix.nonzero()]) == 1):
             if verbose:
                 print('Converged!')
-            return consensus_matrix, ccs.membership
+            return first_consensus_matrix, ccs.membership
         graph = g2
         weights = 'weight'
-    return consensus_matrix, ccs.membership
+    return first_consensus_matrix, ccs.membership
 
 
 def get_nmi_scores(consensus_membership, all_memberships,
