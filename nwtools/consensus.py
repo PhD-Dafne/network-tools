@@ -80,18 +80,34 @@ def consensus_partition(g, initial_partition=None,
     return first_consensus_matrix, ccs.membership
 
 
+def get_nmi_matrix(memberships, average_method='geometric'):
+    from sklearn.metrics.cluster import normalized_mutual_info_score
+    nmi_matrix = np.array(
+        [[normalized_mutual_info_score(mem1, mem2, average_method=average_method)
+          for mem1 in memberships] for mem2 in memberships])
+    return nmi_matrix
+
 def get_nmi_scores(consensus_membership, all_memberships,
                    average_method='geometric'):
     from sklearn.metrics.cluster import normalized_mutual_info_score
     nmi_consensus = [normalized_mutual_info_score(consensus_membership, mem,
                                                   average_method=average_method)
                      for mem in all_memberships]
-    nmi_all = [[normalized_mutual_info_score(mem1, mem2,
-                                             average_method=average_method)
-                for mem1 in all_memberships] for mem2 in all_memberships]
+    nmi_all = get_nmi_matrix(all_memberships, average_method=average_method)
     nmi_all = np.array(nmi_all).flatten()
     return nmi_consensus, nmi_all
 
+def get_unique_partitions(partitions, average_method='geometric'):
+    memberships = [p.membership for p in partitions]
+
+    nmi_all = get_nmi_matrix(memberships, average_method=average_method)
+    partitions_same = 1*(nmi_all==1)
+    g_partitions = igraph.Graph.Adjacency(partitions_same.tolist())
+    ccs = g_partitions.clusters().membership
+    unique_part_index = [np.nonzero(np.array(ccs)==i)[0] for i in set(ccs)]
+    unique_part_counts = [len(a) for a in unique_part_index]
+    unique_partitions = [partitions[i[0]] for i in unique_part_index]
+    return nmi_all, unique_partitions, unique_part_counts
 
 def get_edge_consistency(graph, consensus_matrix):
     """
