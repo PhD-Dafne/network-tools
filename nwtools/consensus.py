@@ -32,6 +32,7 @@ def consensus_partition(g, initial_partition=None,
                         nr_partitions=100,
                         threshold=0,
                         max_nr_iterations=5,
+                        singleton_clusters = False,
                         verbose=False):
     '''
     Partitions graph based on consensus clustering
@@ -60,15 +61,17 @@ def consensus_partition(g, initial_partition=None,
         # Create new graph based on consensus matrix
         consensus_matrix_copy = np.triu(consensus_matrix, 1)
         consensus_matrix_copy[consensus_matrix_copy <= threshold] = 0
+        # Connect clusters of single nodes to heighest-weight neighbors
+        if not singleton_clusters:
+            single_nodes = np.where((consensus_matrix_copy.sum(axis=1) + consensus_matrix_copy.sum(axis=0))==0)[0]
+            closest_neighbors = np.argsort(consensus_matrix[single_nodes], axis=1)[:, -2]
+            consensus_matrix_copy[single_nodes, closest_neighbors] = consensus_matrix[single_nodes, closest_neighbors]
+
         g2 = igraph.Graph.Weighted_Adjacency(consensus_matrix_copy.tolist(),
                                              loops=False, attr='weight',
                                              mode='MAX')
 
         ccs = g2.clusters()
-
-        # are there any solo clusters?
-        if verbose:
-            print('Smallest connected component: {}'.format(min(ccs.sizes())))
 
         # Check if converged
         if (min(consensus_matrix[consensus_matrix.nonzero()]) == 1):
