@@ -1,5 +1,5 @@
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -14,11 +14,14 @@ setup(
     license = "Apache 2.0",
     keywords = "Python",
     url = "https://github.com/dafnevk/network-tools",
-    packages=['nwtools'],
+    packages=find_packages(),
     install_requires=required,
     long_description=read('README.md'),
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',
     ],
+    setup_requires=["pytest-runner", ],
+    tests_require=["pytest", ],
 )
+
