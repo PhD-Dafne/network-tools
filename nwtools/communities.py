@@ -2,8 +2,6 @@ import networkx as nx
 import collections
 import pandas as pd
 from collections import Counter
-import igraph
-import leidenalg
 import numpy as np
 import itertools
 from nwtools import common

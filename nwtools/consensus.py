@@ -1,3 +1,8 @@
+"""
+This module provides different functionalities related to the consensus of
+multiple runs of community detection.
+The algorithms for community detection are provided by the leidenalg package.
+"""
 import igraph
 import leidenalg
 import numpy as np
@@ -8,6 +13,14 @@ def get_initial_partitions(g,
                            partition_type=leidenalg.ModularityVertexPartition,
                            weights=None,
                            nr_partitions=100):
+    """
+
+    :param g:
+    :param partition_type:
+    :param weights:
+    :param nr_partitions:
+    :return:
+    """
     partitions = []
     for i in range(nr_partitions):
         partitions.append(
@@ -17,6 +30,12 @@ def get_initial_partitions(g,
 
 
 def get_consensus_matrix(partitions, nr_nodes):
+    """
+
+    :param partitions: iterable of igraph.clustering.VertexClustering
+    :param nr_nodes: number of nodes in the graph
+    :return: numpy matrix of shape (nr_nodes, nr_nodes)
+    """
     consensus_matrix = scipy.sparse.csr_matrix((nr_nodes, nr_nodes))
     for partition in partitions:
         b = scipy.sparse.coo_matrix((np.repeat(1, len(partition.membership)), (
@@ -32,12 +51,20 @@ def consensus_partition(g, initial_partition=None,
                         nr_partitions=100,
                         threshold=0,
                         max_nr_iterations=5,
-                        singleton_clusters = False,
+                        singleton_clusters=False,
                         verbose=False):
-    '''
+    """
     Partitions graph based on consensus clustering
+    :param verbose:
+    :param singleton_clusters:
+    :param max_nr_iterations:
+    :param threshold:
+    :param nr_partitions:
+    :param weights:
+    :param partition_type:
+    :param initial_partition:
     :param g: igraph Graph
-    '''
+    """
     n = len(g.vs)
     graph = g
     first_consensus_matrix = None
@@ -56,16 +83,19 @@ def consensus_partition(g, initial_partition=None,
 
         # Calculate the consensus matrix
         consensus_matrix = get_consensus_matrix(partitions, n)
-        if j==0:
+        if j == 0:
             first_consensus_matrix = consensus_matrix
         # Create new graph based on consensus matrix
         consensus_matrix_copy = np.triu(consensus_matrix, 1)
         consensus_matrix_copy[consensus_matrix_copy <= threshold] = 0
         # Connect clusters of single nodes to heighest-weight neighbors
         if not singleton_clusters:
-            single_nodes = np.where((consensus_matrix_copy.sum(axis=1) + consensus_matrix_copy.sum(axis=0))==0)[0]
-            closest_neighbors = np.argsort(consensus_matrix[single_nodes], axis=1)[:, -2]
-            consensus_matrix_copy[single_nodes, closest_neighbors] = consensus_matrix[single_nodes, closest_neighbors]
+            single_nodes = np.where((consensus_matrix_copy.sum(
+                axis=1) + consensus_matrix_copy.sum(axis=0)) == 0)[0]
+            closest_neighbors = np.argsort(consensus_matrix[single_nodes],
+                                           axis=1)[:, -2]
+            consensus_matrix_copy[single_nodes, closest_neighbors] = \
+                consensus_matrix[single_nodes, closest_neighbors]
 
         g2 = igraph.Graph.Weighted_Adjacency(consensus_matrix_copy.tolist(),
                                              loops=False, attr='weight',
@@ -84,14 +114,31 @@ def consensus_partition(g, initial_partition=None,
 
 
 def get_nmi_matrix(memberships, average_method='geometric'):
+    """
+    Calculate full matrix of NMI scores of all combinations of partitionings
+    :param memberships: list of numpy arrays with node memberships
+    :param average_method: see sklearn.metrics.cluster.normalized_mutual_info_score
+    :return: numpy matrix of shape (nr_partitions, nr_partitions) with NMI scores
+    """
     from sklearn.metrics.cluster import normalized_mutual_info_score
     nmi_matrix = np.array(
-        [[normalized_mutual_info_score(mem1, mem2, average_method=average_method)
+        [[normalized_mutual_info_score(mem1, mem2,
+                                       average_method=average_method)
           for mem1 in memberships] for mem2 in memberships])
     return nmi_matrix
 
+
 def get_nmi_scores(consensus_membership, all_memberships,
                    average_method='geometric'):
+    """
+    Calculate the NMI score between a consensus partitioning and a list of
+    partitionings,  and between all individual partitonings of the list.
+
+    :param consensus_membership: igraph.clustering.VertexClustering that denotes the consensus clustering
+    :param all_memberships: iterable of igraph.clustering.VertexClustering
+    :param average_method: see sklearn.metrics.cluster.normalized_mutual_info_score
+    :return: (nmi_consensus, nmi_all) - NMI scores
+    """
     from sklearn.metrics.cluster import normalized_mutual_info_score
     nmi_consensus = [normalized_mutual_info_score(consensus_membership, mem,
                                                   average_method=average_method)
@@ -100,17 +147,26 @@ def get_nmi_scores(consensus_membership, all_memberships,
     nmi_all = np.array(nmi_all).flatten()
     return nmi_consensus, nmi_all
 
+
 def get_unique_partitions(partitions, average_method='geometric'):
+    """
+    Find identical partitionings in a list of partitionings.
+
+    :param partitions: list of igraph.clustering.VertexClustering
+    :param average_method: see sklearn.metrics.cluster.normalized_mutual_info_score
+    :return: (nmi_all, unique_partitions, unique_part_counts)
+    """
     memberships = [p.membership for p in partitions]
 
     nmi_all = get_nmi_matrix(memberships, average_method=average_method)
-    partitions_same = 1*(nmi_all==1)
+    partitions_same = 1 * (nmi_all == 1)
     g_partitions = igraph.Graph.Adjacency(partitions_same.tolist())
     ccs = g_partitions.clusters().membership
-    unique_part_index = [np.nonzero(np.array(ccs)==i)[0] for i in set(ccs)]
+    unique_part_index = [np.nonzero(np.array(ccs) == i)[0] for i in set(ccs)]
     unique_part_counts = [len(a) for a in unique_part_index]
     unique_partitions = [partitions[i[0]] for i in unique_part_index]
     return nmi_all, unique_partitions, unique_part_counts
+
 
 def get_edge_consistency(graph, consensus_matrix):
     """
@@ -139,7 +195,7 @@ def modularity_contribution(graph, membership, weight=None):
 
     :param graph: igraph object
     :param membership: list of cluster membership
-    :return:
+    :return: (gain, penalty, contribution) - tuple of numpy arrays
     """
     vcount = graph.vcount()
     b = scipy.sparse.coo_matrix((np.repeat(1, len(membership)), (
