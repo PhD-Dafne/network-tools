@@ -14,12 +14,14 @@ def get_initial_partitions(g,
                            weights=None,
                            nr_partitions=100):
     """
+    Find initial set of partitions using a community detection method
 
-    :param g:
-    :param partition_type:
-    :param weights:
-    :param nr_partitions:
-    :return:
+    :param igraph.Graph g: graph
+    :param partition_type: subtype of `leidenalg.VertexPartition`, implementing a community detection algorithm
+    :param weights: weight attribute in graph
+    :param nr_partitions: number of partitions
+
+    :return: list of partitions
     """
     partitions = []
     for i in range(nr_partitions):
@@ -31,10 +33,12 @@ def get_initial_partitions(g,
 
 def get_consensus_matrix(partitions, nr_nodes):
     """
+    Get the consensus matrix of a list of partitions.
 
     :param partitions: iterable of igraph.clustering.VertexClustering
     :param nr_nodes: number of nodes in the graph
-    :return: numpy matrix of shape (nr_nodes, nr_nodes)
+    :return: consensus matrix of shape (nr_nodes, nr_nodes)
+    :rtype: numpy.array
     """
     consensus_matrix = scipy.sparse.csr_matrix((nr_nodes, nr_nodes))
     for partition in partitions:
@@ -54,16 +58,22 @@ def consensus_partition(g, initial_partition=None,
                         singleton_clusters=False,
                         verbose=False):
     """
-    Partitions graph based on consensus clustering
-    :param verbose:
-    :param singleton_clusters:
-    :param max_nr_iterations:
-    :param threshold:
-    :param nr_partitions:
-    :param weights:
-    :param partition_type:
-    :param initial_partition:
-    :param g: igraph Graph
+    Partitions grap based on consensus clustering.
+    Reference:
+    A.  Lancichinetti,  S.  Fortunato,  Consensus  clustering  in  complex  networks,  Scientific Reports 2(1), 336 (2012).  DOI 10.1038/srep00336
+
+    :param igraph.Graph g: graph
+    :param initial_partition: precalculated list of partitions (optional)
+    :param leidenalg.VertexPartition partition_type: subtype of community detection algorithm
+    :param str weights: weight attribute in graph
+    :param int nr_partitions: number of partitions
+    :param float threshold: threshold for consensus clustering algorithm
+    :param int max_nr_iterations: maximum number of iterations in consensus clustering
+    :param bool singleton_clusters: Whether to allow clusters of only one node
+    :param bool verbose: If true, print details on progress
+
+    :return: consensus matrix of first iteration, consensus clustering membership of nodes
+    :rtype: (np.array, list[int])
     """
     n = len(g.vs)
     graph = g
@@ -115,10 +125,13 @@ def consensus_partition(g, initial_partition=None,
 
 def get_nmi_matrix(memberships, average_method='geometric'):
     """
-    Calculate full matrix of NMI scores of all combinations of partitionings
-    :param memberships: list of numpy arrays with node memberships
-    :param average_method: see sklearn.metrics.cluster.normalized_mutual_info_score
-    :return: numpy matrix of shape (nr_partitions, nr_partitions) with NMI scores
+    Calculate full matrix of NMI scores of all combinations of partitions
+
+    :param list[np.array] memberships: list of numpy arrays with node memberships
+    :param str average_method: see sklearn.metrics.cluster.normalized_mutual_info_score
+
+    :return: matrix of shape (nr_partitions, nr_partitions) with NMI scores
+    :rtype: numpy.array
     """
     from sklearn.metrics.cluster import normalized_mutual_info_score
     nmi_matrix = np.array(
@@ -132,12 +145,14 @@ def get_nmi_scores(consensus_membership, all_memberships,
                    average_method='geometric'):
     """
     Calculate the NMI score between a consensus partitioning and a list of
-    partitionings,  and between all individual partitonings of the list.
+    partitionings,  and between all individual partitions of the list.
 
-    :param consensus_membership: igraph.clustering.VertexClustering that denotes the consensus clustering
+    :param igraph.clustering.VertexClustering consensus_membership: consensus clustering
     :param all_memberships: iterable of igraph.clustering.VertexClustering
-    :param average_method: see sklearn.metrics.cluster.normalized_mutual_info_score
+    :param str average_method: see sklearn.metrics.cluster.normalized_mutual_info_score
+
     :return: (nmi_consensus, nmi_all) - NMI scores
+    :rtype: (list, np.array)
     """
     from sklearn.metrics.cluster import normalized_mutual_info_score
     nmi_consensus = [normalized_mutual_info_score(consensus_membership, mem,
@@ -150,11 +165,13 @@ def get_nmi_scores(consensus_membership, all_memberships,
 
 def get_unique_partitions(partitions, average_method='geometric'):
     """
-    Find identical partitionings in a list of partitionings.
+    Find identical partitions in a list of partitionings.
 
-    :param partitions: list of igraph.clustering.VertexClustering
-    :param average_method: see sklearn.metrics.cluster.normalized_mutual_info_score
+    :param partitions: iterable of igraph.clustering.VertexClustering
+    :param str average_method: see sklearn.metrics.cluster.normalized_mutual_info_score
+
     :return: (nmi_all, unique_partitions, unique_part_counts)
+    :rtype: (np.array, list[igraph.clustering.VertexClustering], list[int])
     """
     memberships = [p.membership for p in partitions]
 
@@ -172,9 +189,10 @@ def get_edge_consistency(graph, consensus_matrix):
     """
     Defines consensus and consistency scores for edges in the graph
 
-    :param graph: igraph object
-    :param consensus_matrix: numpy matrix with the consensus matrix
+    :param igraph.Graph graph: igraph Graph
+    :param np.array consensus_matrix: the consensus matrix
     :return: the input graph, with edge attributes 'consensus' and 'consistency'
+    :rtype: igraph.Graph
     """
     edge_indices = [e.tuple for e in graph.es]
     ix, jx = zip(*edge_indices)
@@ -193,9 +211,10 @@ def modularity_contribution(graph, membership, weight=None):
     in 2016 IEEE Congress on Evolutionary Computation (CEC),
     Vancouver, BC, Canada, 2016, pp. 4618–4625.
 
-    :param graph: igraph object
-    :param membership: list of cluster membership
-    :return: (gain, penalty, contribution) - tuple of numpy arrays
+    :param igraph.Graph graph: igraph Graph
+    :param list membership: list of cluster membership
+    :return: (gain, penalty, contribution)
+    :rtype: (np.arrary, np.array, np.array)
     """
     vcount = graph.vcount()
     b = scipy.sparse.coo_matrix((np.repeat(1, len(membership)), (

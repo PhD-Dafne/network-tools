@@ -7,14 +7,17 @@ import itertools
 from nwtools import common
 
 def partition_statistics(partition, graph, weight=None):
-    '''
+    """
     Calculates statistics for each partition of a network.
     Treats the network as undirected.
     
-    :param partition: dict {node: community}
-    :param graph: networkx graph
+    :param dict partition: assignment into communities: `{node: community}`
+    :param networkx.Graph graph: networkx graph
+    :param str weight: optional weight attribute
+
     :return: statistics
-    '''
+    :rtype: dict(int, dict(str, list))
+    """
 
     reverse_partition = collections.defaultdict(list)
     for n in partition:
@@ -43,9 +46,15 @@ def partition_statistics(partition, graph, weight=None):
 
 
 def compare_communities(partition1, partition2, graph):
-    '''
+    """
     Calculates different similarity measures between two partitions of a graph
-    '''
+    :param dict partition1: first partition
+    :param dict partition2: second partition
+    :param networkx.Graph graph: networkx graph
+
+    :return: dict with similarity measures
+    :rtype: dict
+    """
     result = {}
     partition_merged = pd.DataFrame({'p1': partition1, 'p2':partition2})
     result['nodes_contigency_table'] = partition_merged.pivot_table(index='p1', columns='p2', aggfunc=len, fill_value=0)
@@ -143,10 +152,11 @@ def map_labels_over_time(labels_list, jaccard=True, min_overlap=0.1, character_l
     return mappings
 
 def citation_distance_matrix(graph):
-    '''
+    """
     :param graph: networkx graph
-    returns: distance matrix, node labels
-    '''
+
+    :returns: distance matrix, node labels
+    """
     sinks = [key for key, outdegree in graph.out_degree() if outdegree==0]
     paths = {s: nx.shortest_path_length(graph, target=s) for s in sinks}
     paths_df = pd.DataFrame(paths)#, index=graph.nodes)
