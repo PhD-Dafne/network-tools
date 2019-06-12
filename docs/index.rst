@@ -7,10 +7,10 @@ Welcome to nwtools's documentation!
 ===================================
 `nwtools` is a collection of network analysis tools on top of NetworkX and iGraph.
 
+Contents:
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
    modules
 
